@@ -555,6 +555,8 @@ def create_ellipse_mask(h, w, center = None, radius_h = None, radius_w = None, p
     
     img = np.zeros((h, w))
     mask = cv2.ellipse(img, (center_w, center_h), (radius_w, radius_h), 0, 0, 360, 255, -1)
+    mask = np.argwhere(mask>0, 1, 0)
+    
     return mask
 
 
