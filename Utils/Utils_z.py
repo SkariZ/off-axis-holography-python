@@ -174,13 +174,14 @@ def find_focus_field(field, steps=51, interval = [-10, 10], m = 'abs', use_max_r
                           steps=steps, 
                           interval = interval)   
     
-    #standard deviation of sobelfiltered image. Other criterions can be used aswell
-    if m == 'sobel':
-        criterion = [np.std(ndimage.sobel(im.real)) + np.std(ndimage.sobel(im.imag))  for im in a]
-    elif m == 'abs':
+    #Standar ddeviation of abs is the most common.
+    if m == 'abs':
         criterion = [np.std(np.abs(im))  for im in a]
+    elif m == 'sobel':
+        criterion = [-(np.std(ndimage.sobel(im.real)) + np.std(ndimage.sobel(im.imag))) for im in a]
     elif m == 'adjescent':
-        criterion = [adjescent_pixels(im, n_rows = 1024)  for im in a]
+        n_rows = int(0.5 * a.shape[0])
+        criterion = [adjescent_pixels(im, n_rows)  for im in a]
         
     #idx of max 
     idx = np.argmax(criterion)
