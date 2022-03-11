@@ -159,9 +159,10 @@ def find_focus_field(field, steps=51, interval = [-10, 10], m = 'abs', padding=0
 
     """
 
-    if not isinstance(field, complex):
+    if np.sum(field.imag) == 0:
         field = field[..., 0] + 1j*field[..., 1]
 
+    #Interval to propagate within
     zv = np.linspace(interval[0], interval[1], steps)
     
     #Predefined bbox
