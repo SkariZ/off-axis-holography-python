@@ -54,18 +54,21 @@ def precalc(field):
 
     return x, y, K, C 
 
-def refocus_field_z(field, z_prop):
+def refocus_field_z(field, z_prop, padding = 0):
     """
     Function for refocusing field.
 
     Input:
         field : Complex valued optical field.
         z_prop : float or integer of amount of z propagation.
-
+        padding : Pad image by this amount in all directions
     Output: 
          Refocused field
 
     """
+
+    if padding > 0:
+        field = np.pad(field, ((padding, padding), (padding, padding)), mode = 'reflect')
 
     k = 2 * np.pi / 0.633 # Wavevector
     _, _ , K, C = precalc(field)
@@ -81,10 +84,13 @@ def refocus_field_z(field, z_prop):
     #Propagate f1 by z_prop
     refocused = np.array(np.fft.ifft2(Tz*f1), dtype = np.complex64)
     
+    if padding > 0:
+        refocused = refocused[:, padding:-padding, padding:-padding]
+
     return np.squeeze(refocused)
 
 
-def refocus_field(field, steps=51, interval = [-10, 10]):
+def refocus_field(field, steps=51, interval = [-10, 10], padding = 0):
     """
     Function for refocusing field.
 
@@ -92,12 +98,16 @@ def refocus_field(field, steps=51, interval = [-10, 10]):
         field : Complex valued optical field.
         Steps : N progation steps, equally ditributed in interval.
         Interval : Refocusing interval
+        padding : Pad image by this amount in all directions
 
     Output: 
         A stack of propagated_fields
 
     """
     
+    if padding > 0:
+        field = np.pad(field, ((padding, padding), (padding, padding)), mode = 'reflect')
+
     k = 2 * np.pi / 0.633
     _, _, K, C = precalc(field)
     
@@ -112,6 +122,9 @@ def refocus_field(field, steps=51, interval = [-10, 10]):
     #Stack of different refocused images.
     refocused =  np.array([np.fft.ifft2(Tz[i]*f1) for i in range(steps)], dtype = np.complex64)
     
+    if padding > 0:
+        refocused = refocused[:, padding:-padding, padding:-padding]
+
     return refocused
     
 def adjescent_pixels(image, n_rows):
@@ -128,7 +141,7 @@ def adjescent_pixels(image, n_rows):
         
     return float(abssum / n_rows)  
     
-def find_focus_field(field, steps=51, interval = [-10, 10], m = 'abs', use_max_real = False, bbox = []):
+def find_focus_field(field, steps=51, interval = [-10, 10], m = 'abs', padding=0, use_max_real = False, bbox = []):
     """
     Find focus of optical field.
 
@@ -137,6 +150,7 @@ def find_focus_field(field, steps=51, interval = [-10, 10], m = 'abs', use_max_r
         Steps : N progation steps, equally ditributed in interval.
         Interval : Refocusing interval
         m : Evaluation criterion, 'abs', 'sobel', or 'adjescent'
+        padding : Pad image by this amount in all directions
         use_max_real : simply take the max value of the real part of the optical field and extract an roi around that point.
         bbox : evaluate the focus in the region of the bounding box.
 
@@ -145,13 +159,17 @@ def find_focus_field(field, steps=51, interval = [-10, 10], m = 'abs', use_max_r
 
     """
 
+    if not isinstance(field, complex):
+        field = field[..., 0] + 1j*field[..., 1]
+
     zv = np.linspace(interval[0], interval[1], steps)
     
     #Predefined bbox
     if len(bbox)==4 and use_max_real == False:
         a = refocus_field(field[bbox[0]:bbox[1], bbox[2]:bbox[3]], 
                           steps=steps, 
-                          interval = interval)
+                          interval = interval,
+                          padding=padding)
         
     elif use_max_real==True:
         idx_max = np.unravel_index(np.argmax(field.real, axis=None), field.real.shape)
@@ -167,12 +185,14 @@ def find_focus_field(field, steps=51, interval = [-10, 10], m = 'abs', use_max_r
         
         a = refocus_field(field, 
                           steps=steps, 
-                          interval = interval)  
+                          interval = interval,
+                          padding=padding)  
         
     else:
         a = refocus_field(field, 
                           steps=steps, 
-                          interval = interval)   
+                          interval = interval,
+                          padding=padding)   
     
     #Standar ddeviation of abs is the most common.
     if m == 'abs':
