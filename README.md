@@ -16,4 +16,4 @@ scipy
 
 Start from a holographic image.
 
-<img src="samplefolder/PS_beads_1_1_1.png" width="965" height="725">
+<img src="samplefolder/PS_beads_1_1_1.png" width="482" height="362">
