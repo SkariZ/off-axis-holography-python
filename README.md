@@ -13,7 +13,11 @@ scipy
 
 
 ### Examples
+####Holographic reconstruction
+Start from a holographic image and go to the full optical field.
+<img src="samplefolder/PS_beads_1_1_1.png" width="482" height="362" title="Holographic image">
+and go to
+<img src="plots/psl_111/phase_corrections2.png" width="482" height="362" title="1. Phase image pre unwrap, 2. Phase image post unwrap 3. Final phase image">
 
-Start from a holographic image.
 
-<img src="samplefolder/PS_beads_1_1_1.png" width="482" height="362">
+
