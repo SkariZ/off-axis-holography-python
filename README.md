@@ -1,2 +1,15 @@
 # off-axis-holography-python
-Example of holographic reconstruction of an image aquired via off-axis-holography.
+
+## Description
+
+Simple example of holographic reconstruction of an image aquired via off-axis-holography and also how to propagate the field
+
+## Getting Started
+
+### Dependencies
+
+numpy
+matplotlib
+scikit-image
+scipy
+
