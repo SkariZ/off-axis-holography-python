@@ -17,3 +17,4 @@ scipy
 Start from a holographic image.
 
 ![plot](samplefolder/PS_beads_1_1_1.png)
+<img src="samplefolder/PS_beads_1_1_1.png" width="256" height="256">
