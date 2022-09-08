@@ -29,6 +29,6 @@ Start from a holographic image and go to the full optical field.
 From the optical field one can also propagate the field to any z.
 
 
-<img src="samplefolder/psl_111_propagate/z_propagation_real.png" width="482" height="482" title="Propagation to different z-planes">
+<img src="plots/psl_111_propagate/z_propagation_real.png" width="482" height="482" title="Propagation to different z-planes">
 
 
