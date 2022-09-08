@@ -22,7 +22,7 @@ Start from a holographic image and go to the full optical field.
 🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳🠳
 
 
-<img src="plots/psl_111/phase_corrections2.png" title="1. Phase image pre unwrap, 2. Phase image post unwrap 3. Final phase image">
+<img src="plots/psl_111_propagate/optical_field_full.png" width="482" height="482" title="Full optical field">
 
 ### Holographic reconstruction
 
