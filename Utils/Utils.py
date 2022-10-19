@@ -104,7 +104,7 @@ def correct_phase_4order_removal(phase_img, X, Y, polynomial, phi_thres = 0.7):
 
 
     disk = morphology.disk(radius=5) #Some tuning of the radius  might be necessary.
-    thresholded_image2 = morphology.dilation(thresholded_image_inv, selem=disk)
+    thresholded_image2 = morphology.dilation(thresholded_image_inv, footprint=disk)
     thresholded_image2_bol = np.where(thresholded_image2==0 , True, False)
     
     #Extract the x and y for the thresholded data.

@@ -1,2 +1,10 @@
+
+#Ignore folders
+**/.ipynb_checkpoints
+**/__pycache__
+
 Utils/__pycache__/
+
+#Ignore files ending with
+*.npy
 *.pyc
