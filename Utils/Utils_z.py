@@ -40,7 +40,7 @@ def precalc(field, wavelength=0.532):
 
     """
     
-    k = 2* np.pi / wavelength # Wavevector
+    k = 2 * np.pi / wavelength*1.33 # Wavevector
     
     yr, xr = field.real.shape
 
@@ -55,7 +55,7 @@ def precalc(field, wavelength=0.532):
 
     return x, y, K, C 
 
-def refocus_field_z(field, z_prop, padding = 0, wavelength = 0.532):
+def refocus_field_z(field, z_prop, padding = 0, wavelength = 0.532, to_real = False):
     """
     Function for refocusing field.
 
@@ -74,7 +74,7 @@ def refocus_field_z(field, z_prop, padding = 0, wavelength = 0.532):
     if padding > 0:
         field = np.pad(field, ((padding, padding), (padding, padding)), mode = 'reflect')
 
-    k = 2 * np.pi / wavelength # Wavevector
+    k = 2 * np.pi / wavelength*1.33 # Wavevector
     _, _ , K, C = precalc(field, wavelength)
     
     z = [z_prop]
@@ -91,10 +91,16 @@ def refocus_field_z(field, z_prop, padding = 0, wavelength = 0.532):
     if padding > 0:
         refocused = refocused[:, padding:-padding, padding:-padding]
 
+    if to_real:
+        f = np.zeros((refocused.shape[0], refocused.shape[1], 2))
+        f[..., 0] = np.real(refocused)
+        f[..., 1] = np.imag(refocused)
+        refocused = f
+
     return np.squeeze(refocused)
 
 
-def refocus_field(field, steps=51, interval = [-10, 10], padding = 0, wavelength = 0.532):
+def refocus_field(field, steps=51, interval = [-10, 10], padding = 0, wavelength = 0.532, to_real = False):
     """
     Function for refocusing field.
 
@@ -114,7 +120,7 @@ def refocus_field(field, steps=51, interval = [-10, 10], padding = 0, wavelength
     if padding > 0:
         field = np.pad(field, ((padding, padding), (padding, padding)), mode = 'reflect')
 
-    k = 2 * np.pi / wavelength
+    k = 2 * np.pi / wavelength*1.33
     _, _, K, C = precalc(field)
     
     zv = np.linspace(interval[0], interval[1], steps)
@@ -131,9 +137,15 @@ def refocus_field(field, steps=51, interval = [-10, 10], padding = 0, wavelength
     if padding > 0:
         refocused = refocused[:, padding:-padding, padding:-padding]
 
+    if to_real:
+        f = np.zeros((refocused.shape[0], refocused.shape[1], 2))
+        f[..., 0] = np.real(refocused)
+        f[..., 1] = np.imag(refocused)
+        refocused = f
+
     return refocused
     
-def find_focus_field(field, steps=51, interval = [-10, 10], m = 'fft', padding=0, use_max_real = False, bbox = []):
+def find_focus_field(field, steps=51, interval = [-10, 10], m = 'fft', padding=0, ma=0, padmin=0, smooth = False, use_max_real = False, bbox = [], wavelength = 0.532):
     """
     Find focus of optical field.
 
@@ -159,41 +171,42 @@ def find_focus_field(field, steps=51, interval = [-10, 10], m = 'fft', padding=0
     
     #Predefined bbox
     if len(bbox)==4 and use_max_real == False:
-        a = refocus_field(field[bbox[0]:bbox[1], bbox[2]:bbox[3]], 
-                          steps=steps, 
-                          interval = interval,
-                          padding=padding)
+        field = field[bbox[0]:bbox[1], bbox[2]:bbox[3]]
         
     elif use_max_real==True:
         idx_max = np.unravel_index(np.argmax(field.real, axis=None), field.real.shape)
-        padsize = 256
+        padsize = 64
         
         #Use an roi where max is found
         if idx_max[0]-padsize > 0 and idx_max[0]+padsize<field.shape[0] and idx_max[1]-padsize > 0 and idx_max[1]+padsize<field.shape[1]:
             field = field[idx_max[0]-padsize : idx_max[0]+padsize, idx_max[1]-padsize : idx_max[1]+padsize]
-        
-        #Use center...
-        else:
-            field = field[int(field.shape[0]/2 - padsize) : int(field.shape[0]/2 + padsize), int(field.shape[1]/2 - padsize) : int(field.shape[1]/2 + padsize)]     
-        
-        a = refocus_field(field, 
-                          steps=steps, 
-                          interval = interval,
-                          padding=padding)  
-        
-    else:
-        a = refocus_field(field, 
-                          steps=steps, 
-                          interval = interval,
-                          padding=padding)   
+
+
+    field = refocus_field(field, 
+                        steps=steps, 
+                        interval=interval,
+                        padding=padding,
+                        wavelength=wavelength
+                        )
+
+    #Make ROI smaller
+    if padmin < int(field.shape[1] / 2):
+        field = field[:, padmin:-padmin, padmin:-padmin]   
     
+    if smooth == True:
+        #Smoothen the field a bit
+        field = np.array([ndimage.gaussian_filter(f, sigma=1.75) for f in field])
+
+
     #Some ways of finding criterions.
     if m == 'fft':
-        criterion = [-np.std((np.fft.fft2(im)).imag) for im in field]    
+        criterion = [-(np.std((np.fft.fft2(im)).real) + np.std((np.fft.fft2(im)).imag)) for im in field]    
     elif m == 'abs':
         criterion = [np.std(np.abs(im)) for im in field]
     elif m == 'maxabs':
         criterion = [np.max(im.real) + np.max(im.imag) for im in field]
+    elif m == 'maxabs2':
+        criterion = [np.max(np.abs(im.real)) + np.max(np.abs(im.imag)) for im in field]
     elif m == 'sobel':
         criterion = [-(np.std(ndimage.sobel(im.real)) + np.std(ndimage.sobel(im.imag))) for im in field]
     elif m == 'adjescent':
@@ -206,22 +219,25 @@ def find_focus_field(field, steps=51, interval = [-10, 10], m = 'fft', padding=0
         abssqim = [np.abs(im)**2 for im in field]
         criterion = [np.sum(np.abs(ab - np.median(ab))**2) for ab in abssqim]
 
+    if ma>1 and len(criterion)>ma:
+        criterion = moving_average(criterion, ma)
+
     #idx of max 
-    idx = np.argmax(criterion)
-    
+    idxmax = np.argmax(criterion)
     #How much propagation in z
-    z_focus = zv[idx]
+    z_focus = zv[idxmax]
     
     return z_focus, criterion
 
-def find_focus_field_stack(field,  m = 'fft', padmin = 6):
+def find_focus_field_stack(field,  m = 'fft', padmin = 6, ma=0, to_real = False):
     """
     Find focus of optical field and return the "most" focused image in stack.
 
     Input:
         field : Complex valued optical field as a stack.
-        m : Evaluation criterion, 'abs', 'sobel', or 'adjescent', 'tamura'
-        use_max_real : simply take the max value of the real part of the optical field and extract an roi around that point.
+        m : Evaluation criterion
+        padmin : crop image slightly.
+        ma : moving average of metric array
     Output: 
         z_prop : Return focused image
 
@@ -238,11 +254,13 @@ def find_focus_field_stack(field,  m = 'fft', padmin = 6):
 
     #Calculate criterions.
     if m == 'fft':
-        criterion = [-np.std((np.fft.fft2(im)).imag) for im in field]  
+        criterion = [-(np.std((np.fft.fft2(im)).real) + np.std((np.fft.fft2(im)).imag)) for im in field] 
     elif m == 'abs':
         criterion = [np.std(np.abs(im)) for im in field]
     elif m == 'maxabs':
         criterion = [np.max(im.real) + np.max(im.imag) for im in field]
+    elif m == 'maxabs2':
+        criterion = [np.max(np.abs(im.real)) + np.max(np.abs(im.imag)) for im in field]
     elif m == 'sobel':
         criterion = [-(np.std(ndimage.sobel(im.real)) + np.std(ndimage.sobel(im.imag))) for im in field]
     elif m == 'adjescent':
@@ -250,17 +268,26 @@ def find_focus_field_stack(field,  m = 'fft', padmin = 6):
         criterion = [adjescent_pixels(im, n_rows) for im in field]
     elif m == 'tamura':
         ### OBS quite slow for big images...
-        criterion = [Tamura_coefficient(SoG(im)) for im in field]
+        criterion = [(Tamura_coefficient(SoG(im.real)) + Tamura_coefficient(SoG(im.imag)))*0.5 for im in field]
     elif m =='classic':
         abssqim = [np.abs(im)**2 for im in field]
         criterion = [np.sum(np.abs(ab - np.median(ab))**2) for ab in abssqim]
 
+    if ma>1 and len(criterion)>ma:
+        criterion = moving_average(criterion, ma)
+
     #idx of max 
-    idx = np.argmax(criterion)
+    idxmax = np.argmax(criterion)
     
     #Return the max.
-    focused_field = F[idx]
+    focused_field = F[idxmax]
     
+    if to_real:
+        f = np.zeros((focused_field.shape[0], focused_field.shape[1], 2))
+        f[..., 0] = np.real(focused_field)
+        f[..., 1] = np.imag(focused_field)
+        focused_field = f
+
     return focused_field
 
 def Tamura_coefficient(vec):
@@ -287,17 +314,6 @@ def SoG(field):
 
     res = np.sqrt(grad_x + grad_y)
 
-    #res = []
-    #for i in range(1, row):
-    #    for j in range(1, col):
-
-     #       res.append(
-     #           np.sqrt(
-     #               np.abs(field[i, j] - field[i, j-1])**2 + \
-     #               np.abs(field[i, j] - field[i-1, j])**2
-     #               )
-     #       )
-    
     return res
 
 def adjescent_pixels(image, n_rows):
@@ -312,4 +328,7 @@ def adjescent_pixels(image, n_rows):
     for i in range(n_rows-1):
         abssum += np.sum(np.abs(image[i, :].real - image[i+1, :].real))
         
-    return float(abssum / n_rows)  
+    return float(abssum / n_rows) 
+
+def moving_average(x, w):
+    return np.convolve(x, np.ones(w), 'valid') / w 
